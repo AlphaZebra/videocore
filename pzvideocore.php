@@ -147,7 +147,7 @@ function pz_get_thumbnail( $video_url ) {
   // $url = "https://api.vimeo.com/videos/878789429/pictures";
   $args = array(
     'headers' => array(
-        'Authorization' => 'bearer 4d1d240914baf79a3c2a8bd72935c742'
+        'Authorization' => 'bearer ' . $other_id
     )
   );
   $response = wp_remote_get( $url, $args );
@@ -411,5 +411,5 @@ function do_video_form() {
   exit;
 }
   
-
+$other_id = '4d1d240914baf79a3c2a8bd72935c742';
    
