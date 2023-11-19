@@ -19,11 +19,17 @@ if( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 /**
  * This plugin contains several functions for the "videohelper" website blueprint. 
  * These are used in conjunction with the additional plugins pzdomaingrid, pzmagicform, and pzvideoform
+ * 
+ * This file includes:
+ * 1. pz_auto_login -- logs current user in as guest, so they'll have continued access
+ * 2. pz_login_redirect -- Redirect users with editor or administrator role to the curator dashboard page
+ * 3. pz_check_access -- Check whether we can let a requesting entity view a particular page.
  */
 
 // some constants
 define( 'PZ_NONCE_DURATION', "+24 hours" ); 
-define( 'PZ_NEW_VIDEO_REDIRECT', "/curator-dashboard");
+define( 'PZ_CURATOR_DASHBOARD', "/curator-dashboard");
+define( 'PZ_MAGIC_KEY_PAGE', "/magic");
 
 // hook to create the two tables, one for access tokens, one for whitelisted domains
 register_activation_hook(
@@ -31,6 +37,7 @@ register_activation_hook(
 	'pz_onActivate'
 );
 
+// register hooks for processing submission of the new video form
 add_action('admin_post_do-video-form', 'do_video_form');
 add_action('admin_post_nopriv_do-video-form', 'do_video_form');
 
@@ -45,12 +52,20 @@ function pz_auto_login() {
       $user_login = 'guest';
 
      //get user's ID
-      $user = get_userdatabylogin($user_login);
+      $user = get_user_by( 'login', $user_login );
+      if( !$user ) {
+        echo "Problem with user account " . $user_login;
+        exit;
+      }
       $user_id = $user->ID;
 
       
       //login
-      wp_set_current_user($user_id, $user_login);
+      $user_return = wp_set_current_user($user_id, $user_login);
+      if( !is_object( $user_return )) {
+        echo "Problem with setting current user.";
+        exit;
+      }
       wp_set_auth_cookie($user_id);
       $creds = array(
         'user_login'    => 'guest',
@@ -73,12 +88,12 @@ function pz_auto_login() {
 function pz_login_redirect( $url, $request, $user ) {
   if ( $user && is_object( $user ) && is_a( $user, 'WP_User' ) ) {
       if ( $user->has_cap( 'administrator' ) ) {
-          $url = '/curator-dashboard';
+          $url = PZ_CURATOR_DASHBOARD;
       } else if( $user->has_cap( 'editor' )) {
-        $url = '/curator-dashboard';
+        $url = PZ_CURATOR_DASHBOARD;
       }
       else {
-          $url = '/' ;
+          $url = '/' ; 
       }
   }
   return $url;
@@ -113,14 +128,14 @@ if( isset($_GET['token'])) {
   $q = add_query_arg( array(), $wp->request );
 
   if( $q == '' ) {
-    wp_redirect('/magic');
+    wp_redirect(PZ_MAGIC_KEY_PAGE);
     exit;
   }
   
   if( $q == 'magic' ) return;
   if( $q == 'magic-sent') return;
 
-  wp_redirect('/magic');
+  wp_redirect(PZ_MAGIC_KEY_PAGE);
   exit;
 }
 
@@ -141,6 +156,7 @@ function pz_get_embed( $video_url ) {
 
 
 function pz_get_thumbnail( $video_url ) {
+  global $other_id;
   $p = strrpos( $video_url, '\/' );
   $video_id = substr( $video_url, $p+1 );
   $url = "https://api.vimeo.com/videos/" . $video_id . "/pictures";
@@ -283,8 +299,13 @@ function pz_upload_image( $file_url, $post_id, $description ) {
   // it downloads with an automatic .tmp extension, so we change it to .png,
   // because that's what the file actually is
   $temp_file = download_url( $url, $timeout_seconds );
+  if ( is_wp_error( $temp_file ) ) {
+    $error_string = $result->get_error_message();
+    echo '<div id="message" class="error"><p>' . $error_string . '</p></div>';
+  } else {
   $png_file = str_replace( ".tmp", ".png", $temp_file );
   rename($temp_file, $png_file );
+  }
 
   // we go through convoluted process to load the file to the media directory on the site
   if ( !is_wp_error( $temp_file ) ) {
@@ -399,6 +420,7 @@ function do_video_form() {
     'post_title'    => sanitize_text_field($_POST['video_name']),
     'post_content'  => $long_desc,
     'post_status'   => 'publish',
+    'post_category' => [$_POST['cat']],
     'post_author'   => 1,
   );
 
@@ -407,9 +429,20 @@ function do_video_form() {
   pz_upload_image( $thumbnail, $post_id, '');
 
   // and now we just jump back to the dashboard
-  wp_redirect( PZ_NEW_VIDEO_REDIRECT );
+  wp_redirect( PZ_CURATOR_DASHBOARD );
   exit;
 }
   
-$other_id = '4d1d240914baf79a3c2a8bd72935c742';
+// $other_id = '4d1d240914baf79a3c2a8bd72935c742';
+$other_id = 'ef3660c0803d2ae9ef888af772521006';
    
+
+
+function filter_allowed_block_types_when_post_provided( $allowed_block_types, $editor_context ) {
+  if ( ! empty( $editor_context->post ) ) {
+      return array( 'core/paragraph', 'core/heading', 'pz/pzvideoform' );
+  }
+  return $allowed_block_types;
+}
+
+add_filter( 'allowed_block_types_all', 'filter_allowed_block_types_when_post_provided', 10, 2 );
