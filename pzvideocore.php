@@ -5,7 +5,7 @@
  *                    PZ plugins.
  * Requires at least: 6.1
  * Requires PHP:      7.0
- * Version:           0.1.1
+ * Version:           0.1.2
  * Author:            Robert Richardson
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -104,38 +104,86 @@ add_filter( 'login_redirect', 'pz_login_redirect', 10, 3 );
 /**
  * Check Access
  * Check whether we can let a requesting entity view a particular page.
- * Hook just before page loaded
+ * Hook just before page loaded -- either we let them through (by returning)
+ * --or else we redirect and they don't go to the page. 
  */
 add_action( "template_redirect", "pz_check_access" );
 function pz_check_access() {
   global $wp;
-// if this is a logged in user, then fine, do nothing
+  
 if( is_user_logged_in()) { 
+  
+  if( isset($_GET['qurl']) || isset($_GET['anchor'])) {
+      
+    if( isset($_GET['qurl']) && $_GET['qurl'] != '') {
+      $redirect_url = "/" . sanitize_url($_GET['qurl']) . "/";
+    } else $redirect_url = "/";
+      if( isset($_GET['anchor'])) {
+        $redirect_url = trailingslashit($redirect_url) . "#" . $_GET['anchor'];
+      }
+      wp_redirect($redirect_url);
+      exit;
+    
+  } 
   return;  
 } 
 
+
+// otherwise, this isn't a logged-in user. 
 // if there's an access token, check if valid and, if valid, log user in
 if( isset($_GET['token'])) {
+  
   if(pz_test_token( $_GET['token'] )) { 
     // log user in as guest
     pz_auto_login();
-    return;
-  }
-}
-
-  // if this is home page, do nothing
-  // we're using add_query_arg "off label" to get the current arg, without adding anything
-  $q = add_query_arg( array(), $wp->request );
-
-  if( $q == '' ) {
-    wp_redirect(PZ_MAGIC_KEY_PAGE);
+  } else {
+    $redirect_url = PZ_MAGIC_KEY_PAGE . "/?q=" . $q . "&anchor=" . $anchor;
+    wp_redirect($redirect_url);
     exit;
   }
+
   
+    // if we received the url as parameters, we need to reassembled that and redirect --
+    // this would be the page the user was attempting to access before a magic key link
+    // was required
+    if( isset($_GET['qurl']) || isset($_GET['anchor'])) {
+      
+      if( isset($_GET['qurl']) && $_GET['qurl'] != '') {
+        $redirect_url = "/" . $_GET['qurl'] . "/";
+      } else $redirect_url = "/";
+        if( isset($_GET['anchor'])) {
+          $redirect_url = $redirect_url . "#" . $_GET['anchor'];
+        }
+        wp_redirect($redirect_url);
+        exit;
+      
+    }
+    
+    return;
+  
+}
+
+  // if we're not logged in and we don't have a valid token, then we need to offer a magic key email
+  // to be nice, we'd like to store the full url they were _trying_ to get to and put it in the magic key link
+  // we're using add_query_arg "off label" to get the current arg, without adding anything
+  $q = add_query_arg( array(), $wp->request );
+  if( isset($_GET['anchor'])) {
+    $anchor = $_GET['anchor'];
+  } else $anchor = '';
+  
+
+  
+  // if we're headed to a 'magic' page (because we just redirected above, but this is a new page request now)
   if( $q == 'magic' ) return;
   if( $q == 'magic-sent') return;
 
-  wp_redirect(PZ_MAGIC_KEY_PAGE);
+  // any other value of $q or $anchor should be passed to the form on magic page, so we
+  // can preserve it in the magic link we send to the user. That way, when they 
+  // click in the email, they'll be taken to the page they were originally trying
+  // to access.
+
+  $redirect_url = PZ_MAGIC_KEY_PAGE . "/?q=" . $q . "&anchor=" . $anchor;
+  wp_redirect($redirect_url);
   exit;
 }
 
@@ -255,10 +303,10 @@ function pz_onActivate() {
    function pz_test_token($token) {
     global $wpdb;
     $now=strtotime("now");
-
+    
     $item = [];
     $item['token'] = $_GET['token'];
-
+    
     // get record from token table
     $results = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}pz_token WHERE token = '{$item['token']}'", ARRAY_A );
     if( isset($results[0])) {
@@ -269,12 +317,15 @@ function pz_onActivate() {
         return false;
       } else return true;
 
-    } else return false; // no matching token was found in table
-
+      } else {
+        
+        return false; // no matching token was found in table
+      }
    }
 
    // wrapper for above function
    function do_pzn_test($stuff) {
+    
     // get token from request URL and test for validity
      $result = pz_test_token($_GET['token']);
      if( $result ) return "valid";
@@ -445,4 +496,4 @@ function filter_allowed_block_types_when_post_provided( $allowed_block_types, $e
   return $allowed_block_types;
 }
 
-add_filter( 'allowed_block_types_all', 'filter_allowed_block_types_when_post_provided', 10, 2 );
+// add_filter( 'allowed_block_types_all', 'filter_allowed_block_types_when_post_provided', 10, 2 );
