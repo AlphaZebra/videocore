@@ -42,6 +42,14 @@ add_action('admin_post_do-video-form', 'do_video_form');
 add_action('admin_post_nopriv_do-video-form', 'do_video_form');
 
 
+/**
+ * Extend time before automatic logout to 1 month
+ */
+function keep_me_logged_in_for_1_month( $expirein ) {
+  return 2592000; // 1 month in seconds
+  }
+add_filter( 'auth_cookie_expiration', 'keep_me_logged_in_for_1_month' );
+
 /** 
  * Automated guest user login - if someone presents a valid token, we log them in so 
  * we don't have to keep checking. 
