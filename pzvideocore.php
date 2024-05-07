@@ -5,7 +5,7 @@
  *                    PZ plugins.
  * Requires at least: 6.1
  * Requires PHP:      7.0
- * Version:           0.1.2
+ * Version:           0.1.3
  * Author:            Robert Richardson
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -24,6 +24,15 @@ if( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
  * 1. pz_auto_login -- logs current user in as guest, so they'll have continued access
  * 2. pz_login_redirect -- Redirect users with editor or administrator role to the curator dashboard page
  * 3. pz_check_access -- Check whether we can let a requesting entity view a particular page.
+ * 
+ * There are two places where we intervene in the process of delivering a specific page that's been requested.
+ * These are 1) at login and 2) at template_redirect
+ * 
+ * At login, we merely check to see if the user is an admin or a vid-curator. If either, they are
+ * redirected to the admin page.
+ * 
+ * At template_redirect, we process the various possible parameters to derive a target URL, and then we 
+ * redirect to that URL. The relevant function is pz_check_access()
  */
 
 // some constants
@@ -119,6 +128,13 @@ add_action( "template_redirect", "pz_check_access" );
 function pz_check_access() {
   global $wp;
   
+  //      if the user is logged in, then we don't need to worry about the token 
+  //      parameter. We need to assemble the URL from qurl and anchor parameters.
+  //      
+  //      Since a request like this will have already determined the correct page
+  //      slug for this product and version, we don't have to determine that. 
+
+
 if( is_user_logged_in()) { 
   
   if( isset($_GET['qurl']) || isset($_GET['anchor'])) {
@@ -145,6 +161,8 @@ if( isset($_GET['token'])) {
     // log user in as guest
     pz_auto_login();
   } else {
+    //    if not a valid token, redirect to request email to send magic key to, 
+    //    preserving the URL and any anchors. 
     $redirect_url = PZ_MAGIC_KEY_PAGE . "/?q=" . $q . "&anchor=" . $anchor;
     wp_redirect($redirect_url);
     exit;
@@ -258,6 +276,33 @@ function pz_onActivate() {
   dbDelta("CREATE TABLE $table_str (
     id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
     domain varchar(255) NOT NULL DEFAULT '',
+    PRIMARY KEY  (id)
+  ) $charset;");
+
+  $table_str = $wpdb->prefix . "pz_section";
+
+  // create or update structure of pz_whitelist table. 
+  dbDelta("CREATE TABLE $table_str (
+    id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+    product_name varchar(255) NOT NULL DEFAULT '',
+    the_version varchar(40) NOT NULL DEFAULT '',
+    part_name varchar(255) NOT NULL DEFAULT '', 
+    section_name varchar(255) NOT NULL DEFAULT '',
+    subsection_name varchar(255) NOT NULL DEFAULT '',
+    video_name varchar(255) NOT NULL DEFAULT '',
+    video_slug varchar(255) NOT NULL DEFAULT '',
+    PRIMARY KEY  (id)
+  ) $charset;");
+
+
+  $table_str = $wpdb->prefix . "pz_product";
+
+  // create or update structure of pz_product table, where 
+  // product names and associated versions are stored
+  dbDelta("CREATE TABLE $table_str (
+    id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+    product_name varchar(255) NOT NULL DEFAULT '',
+    version_array varchar(2000) NOT NULL DEFAULT '',
     PRIMARY KEY  (id)
   ) $charset;");
 }
@@ -425,7 +470,6 @@ function pz_upload_image( $file_url, $post_id, $description ) {
     
 
   $attachment_id = attachment_url_to_postid( $local_url );
-  var_dump($attachment_id);
 
   set_post_thumbnail( $post_id, $attachment_id );
 }
@@ -479,13 +523,51 @@ function do_video_form() {
     'post_title'    => sanitize_text_field($_POST['video_name']),
     'post_content'  => $long_desc,
     'post_status'   => 'publish',
-    'post_category' => [$_POST['cat']],
+    // 'post_category' => [$_POST['cat']],
     'post_author'   => 1,
   );
 
   // Insert the post into the database.
   $post_id = wp_insert_post( $my_post );
   pz_upload_image( $thumbnail, $post_id, '');
+
+  // parse out the invidual part, section, and subsection items
+  $kittens = $_POST['cat'];
+  $temp = explode(" -> ", $kittens );
+
+  // Finally, add the information about this video post to the 
+  // pzsection table so it can be selected in various places...
+
+  // let's set up the data that will be the same in each record
+
+  $item['id'] = null;
+  $item['part_name'] = $temp[0];
+  $item['section_name'] = $temp[1];
+  $item['subsection_name'] = isset($temp[2]) ? $temp[2] : '';
+  $item['video_name'] = $_POST['video_name'];
+	$name = sanitize_title_with_dashes( $_POST['video_name']);
+  $item['video_slug'] = $name;
+  
+  // and get the product and version arrays from the posted input
+  $products = $_POST['product_array'];
+  $version_list = $_POST['versions'];
+
+  // now we iterate through each product and through each version within each product
+foreach( $products as $product ) {
+  $item['product_name'] = $product;
+  foreach( $version_list as $version ) {
+    $item['the_version'] = $version;
+    if( $wpdb->insert( "{$wpdb->prefix}pz_section", $item ) <= 0 ) {  
+    echo "Error:\n";
+    var_dump( $wpdb );
+    exit;
+   }
+  }
+}
+
+  
+
+  
 
   // and now we just jump back to the dashboard
   wp_redirect( PZ_CURATOR_DASHBOARD );
