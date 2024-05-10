@@ -289,6 +289,7 @@ function pz_onActivate() {
   // create or update structure of pz_whitelist table. 
   dbDelta("CREATE TABLE $table_str (
     id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+    sort_num bigint(20) unsigned NOT NULL DEFAULT 0,
     product_name varchar(255) NOT NULL DEFAULT '',
     the_version varchar(40) NOT NULL DEFAULT '',
     part_name varchar(255) NOT NULL DEFAULT '', 
