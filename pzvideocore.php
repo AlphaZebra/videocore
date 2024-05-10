@@ -484,7 +484,7 @@ function pz_upload_image( $file_url, $post_id, $description ) {
 function do_video_form() {
   global $wpdb;
 
-  // extract vimeo video id number from video url in form https://vimeo.com/878789429
+    // extract vimeo video id number from video url in form https://vimeo.com/878789429
   $video_id = parse_url($_POST['video_url'], PHP_URL_PATH);
 
   $json_body = pz_get_embed( $_POST['video_url']);
@@ -533,8 +533,8 @@ function do_video_form() {
   );
 
   // Insert the post into the database.
-  $post_id = wp_insert_post( $my_post );
-  pz_upload_image( $thumbnail, $post_id, '');
+  // $post_id = wp_insert_post( $my_post );
+  // pz_upload_image( $thumbnail, $post_id, '');
 
   // parse out the invidual part, section, and subsection items
   $kittens = $_POST['cat'];
@@ -555,18 +555,22 @@ function do_video_form() {
   
   // and get the product and version arrays from the posted input
   $products = $_POST['product_array'];
-  $version_list = $_POST['versions'];
+  $version_list = $_POST['release_array'];
 
   // now we iterate through each product and through each version within each product
 foreach( $products as $product ) {
   $item['product_name'] = $product;
   foreach( $version_list as $version ) {
-    $item['the_version'] = $version;
-    if( $wpdb->insert( "{$wpdb->prefix}pz_section", $item ) <= 0 ) {  
-    echo "Error:\n";
-    var_dump( $wpdb );
-    exit;
-   }
+    // if the product name is found in the string, it's a fit, else skip
+    if( str_contains( $version, $product )) {
+      $stripped_version = substr($version, strpos($version, "/") + 1); // grab release number after slash
+      $item['the_version'] = $stripped_version;
+      if( $wpdb->insert( "{$wpdb->prefix}pz_section", $item ) <= 0 ) {  
+      echo "Error:\n";
+      var_dump( $wpdb );
+      exit;
+     }
+    }
   }
 }
 
