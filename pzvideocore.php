@@ -5,7 +5,7 @@
  *                    PZ plugins.
  * Requires at least: 6.1
  * Requires PHP:      7.0
- * Version:           0.1.4
+ * Version:           0.1.5
  * Author:            Robert Richardson
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -16,6 +16,7 @@
  */
 
  /**
+  * 0.1.5 -- added pz_toc table for part/section/subsection
   * 0.1.4 -- bumped version for multi-product
   */
   
@@ -300,6 +301,19 @@ function pz_onActivate() {
     PRIMARY KEY  (id)
   ) $charset;");
 
+
+$table_str = $wpdb->prefix . "pz_toc";
+
+  // create or update structure of pz_toc (parts, section, subsection) table. 
+  dbDelta("CREATE TABLE $table_str (
+    id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+    product_name varchar(255) NOT NULL DEFAULT '',
+    the_version varchar(40) NOT NULL DEFAULT '',
+    part_name varchar(255) NOT NULL DEFAULT '', 
+    section_name varchar(255) NOT NULL DEFAULT '',
+    subsection_name varchar(255) NOT NULL DEFAULT '',
+    PRIMARY KEY  (id)
+  ) $charset;");
 
   $table_str = $wpdb->prefix . "pz_product";
 
