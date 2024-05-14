@@ -340,11 +340,13 @@ $table_str = $wpdb->prefix . "pz_toc";
    function set_up_pzn_rest_route() {
      register_rest_route('pz/v1', 'pzn', array(
        'methods' => WP_REST_SERVER::READABLE,
-       'callback' => 'do_pzn'
+       'callback' => 'do_pzn',
+       'permission_callback' => '__return_true',
      ));
      register_rest_route('pz/v1', 'pzn_test', array(
        'methods' => WP_REST_SERVER::READABLE,
-       'callback' => 'do_pzn_test'
+       'callback' => 'do_pzn_test',
+       'permission_callback' => '__return_true',
      ));
     
    }
@@ -496,8 +498,11 @@ function pz_upload_image( $file_url, $post_id, $description ) {
 
 // let's handle the form submission when the curator user has filled in the details
 // for a new video post   
+
+
 function do_video_form() {
   global $wpdb;
+
 
     // extract vimeo video id number from video url in form https://vimeo.com/878789429
   $video_id = parse_url($_POST['video_url'], PHP_URL_PATH);
@@ -543,15 +548,16 @@ function do_video_form() {
     'post_title'    => sanitize_text_field($_POST['video_name']),
     'post_content'  => $long_desc,
     'post_status'   => 'publish',
-    // 'post_category' => [$_POST['cat']],
+     'post_category' => [1],
     'post_author'   => 1,
   );
 
-  // Insert the post into the database.
-  // $post_id = wp_insert_post( $my_post );
-  // pz_upload_image( $thumbnail, $post_id, '');
+ // Insert the post into the database.
+  $post_id = wp_insert_post( $my_post );
+  pz_upload_image( $thumbnail, $post_id, '');
 
-  // parse out the invidual part, section, and subsection items
+
+  //parse out the invidual part, section, and subsection items
   $kittens = $_POST['cat'];
   $temp = explode(" -> ", $kittens );
 
@@ -588,15 +594,14 @@ foreach( $products as $product ) {
     }
   }
 }
-
-  
-
-  
-
-  // and now we just jump back to the dashboard
-  wp_redirect( PZ_CURATOR_DASHBOARD );
-  exit;
 }
+
+  
+
+//   // // and now we just jump back to the dashboard
+//   // wp_redirect( PZ_CURATOR_DASHBOARD );
+//   // exit;
+// }
   
 // $other_id = '4d1d240914baf79a3c2a8bd72935c742';
 $other_id = 'ef3660c0803d2ae9ef888af772521006';
