@@ -5,7 +5,7 @@
  *                    PZ plugins.
  * Requires at least: 6.1
  * Requires PHP:      7.0
- * Version:           0.1.5
+ * Version:           1.0.0
  * Author:            Robert Richardson
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -16,6 +16,7 @@
  */
 
  /**
+  * 1.0.0 -- 5/15/24 Bumped version number
   * 0.1.5 -- added pz_toc table for part/section/subsection
   * 0.1.4 -- bumped version for multi-product
   */
