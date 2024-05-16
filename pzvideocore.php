@@ -149,9 +149,16 @@ if( is_user_logged_in()) {
     if( isset($_GET['qurl']) && $_GET['qurl'] != '') {
       $redirect_url = "/" . sanitize_url($_GET['qurl']) . "/";
     } else $redirect_url = "/";
-      if( isset($_GET['anchor'])) {
+    if( isset($_GET['anchor'])) {
         $redirect_url = trailingslashit($redirect_url) . "#" . $_GET['anchor'];
-      }
+    }
+    if( isset($_GET['p'])) {  // preserve p (product) parameter if it was used
+      $redirect_url = trailingslashit($redirect_url) . "/?p=" . $_GET['p'];
+    }
+    if( isset($_GET['v'])) {  // and preserve v (version) parameter if used
+      $redirect_url = trailingslashit($redirect_url) . "&v=" . $_GET['v'];
+    }
+
       wp_redirect($redirect_url);
       exit;
     
