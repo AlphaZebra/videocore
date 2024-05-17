@@ -5,7 +5,7 @@
  *                    PZ plugins.
  * Requires at least: 6.1
  * Requires PHP:      7.0
- * Version:           1.0.0
+ * Version:           1.0.1
  * Author:            Robert Richardson
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -16,6 +16,7 @@
  */
 
  /**
+  * 1.0.1 -- 5/17/24 Preserve 'prod' and 'ver' parms if present in URL
   * 1.0.0 -- 5/15/24 Bumped version number
   * 0.1.5 -- added pz_toc table for part/section/subsection
   * 0.1.4 -- bumped version for multi-product
@@ -142,7 +143,10 @@ function pz_check_access() {
   //      slug for this product and version, we don't have to determine that. 
 
 
+$current_url = home_url(add_query_arg(array(), $wp->request));
+
 if( is_user_logged_in()) { 
+  echo "User is logged in.";
   
   if( isset($_GET['qurl']) || isset($_GET['anchor'])) {
       
@@ -150,19 +154,35 @@ if( is_user_logged_in()) {
       $redirect_url = "/" . sanitize_url($_GET['qurl']) . "/";
     } else $redirect_url = "/";
     if( isset($_GET['anchor'])) {
-        $redirect_url = trailingslashit($redirect_url) . "#" . $_GET['anchor'];
+        $redirect_url = $redirect_url . trailingslashit($redirect_url) . "#" . $_GET['anchor'];
     }
-    if( isset($_GET['p'])) {  // preserve p (product) parameter if it was used
-      $redirect_url = trailingslashit($redirect_url) . "/?p=" . $_GET['p'];
+    if( isset($_GET['prod'])) {  // preserve p (product) parameter if it was used
+      $redirect_url = $redirect_url . trailingslashit($redirect_url) . "/?prod=" . $_GET['p'];
     }
-    if( isset($_GET['v'])) {  // and preserve v (version) parameter if used
-      $redirect_url = trailingslashit($redirect_url) . "&v=" . $_GET['v'];
+    if( isset($_GET['ver'])) {  // and preserve v (version) parameter if used
+      $redirect_url = $redirect_url . trailingslashit($redirect_url) . "&ver=" . $_GET['v'];
     }
 
       wp_redirect($redirect_url);
       exit;
     
-  } 
+  }  else {  // logged in but without qurl and anchor parms 
+    echo "Logged in but no qurl or anchor";
+    echo $current_url;
+    var_dump($_GET);
+      if( isset($_GET['prod'])) {  // preserve p (product) parameter if it was used
+        echo "prod is " . $_GET['prod'];
+        $current_url = $current_url . trailingslashit($current_url) . "?prod=" . $_GET['prod'];
+      }
+      if( isset($_GET['ver'])) {  // and preserve v (version) parameter if used
+        $current_url = $current_url . "&ver=" . $_GET['ver'];
+      }
+    echo $current_url;
+  
+  }
+  exit;
+  wp_redirect($current_url);
+  exit;
   return;  
 } 
 
