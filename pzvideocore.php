@@ -5,7 +5,7 @@
  *                    PZ plugins.
  * Requires at least: 6.1
  * Requires PHP:      7.0
- * Version:           1.0.1
+ * Version:           1.0.2
  * Author:            Robert Richardson
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -16,6 +16,7 @@
  */
 
  /**
+  * 1.0.2 -- 5/21/24 Add is_published field to pz_product table
   * 1.0.1 -- 5/17/24 Preserve 'prod' and 'ver' parms if present in URL
   * 1.0.0 -- 5/15/24 Bumped version number
   * 0.1.5 -- added pz_toc table for part/section/subsection
@@ -345,6 +346,7 @@ $table_str = $wpdb->prefix . "pz_toc";
     id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
     product_name varchar(255) NOT NULL DEFAULT '',
     version_array varchar(2000) NOT NULL DEFAULT '',
+    is_published varchar(2000) NOT NULL DEFAULT '',
     PRIMARY KEY  (id)
   ) $charset;");
 }
