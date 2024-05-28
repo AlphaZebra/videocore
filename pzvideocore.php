@@ -5,7 +5,7 @@
  *                    PZ plugins.
  * Requires at least: 6.1
  * Requires PHP:      7.0
- * Version:           1.0.2
+ * Version:           1.0.4
  * Author:            Robert Richardson
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -16,6 +16,8 @@
  */
 
  /**
+  * 1.0.4 -- 5/28/24 preserve prod and ver when incoming url was from magic key email
+  * 1.0.3 -- 5/27/24 added pz_toc
   * 1.0.2 -- 5/21/24 Add is_published field to pz_product table
   * 1.0.1 -- 5/17/24 Preserve 'prod' and 'ver' parms if present in URL
   * 1.0.0 -- 5/15/24 Bumped version number
@@ -205,10 +207,19 @@ if( isset($_GET['token'])) {
       
       if( isset($_GET['qurl']) && $_GET['qurl'] != '') {
         $redirect_url = "/" . $_GET['qurl'] . "/";
-      } else $redirect_url = "/";
+      } else {
+        $redirect_url = "/";
         if( isset($_GET['anchor'])) {
           $redirect_url = $redirect_url . "#" . $_GET['anchor'];
         }
+      }
+      // add prod and ver to end of url
+      if( isset($_GET['prod'])) {
+        $redirect_url .= "/?prod=" . $_GET['prod'];
+      }
+      if( isset($_GET['ver'])) {
+        $redirect_url .= "&ver=" . $_GET['ver'];
+      }
         wp_redirect($redirect_url);
         exit;
       
