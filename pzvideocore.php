@@ -121,7 +121,7 @@ function pz_login_redirect( $url, $request, $user ) {
         $url = PZ_CURATOR_DASHBOARD;
       }
       else {
-          $url = '/' ; 
+          // $url = '/' ; 
       }
   }
   return $url;
@@ -159,10 +159,10 @@ if( is_user_logged_in()) {
         $redirect_url = $redirect_url . trailingslashit($redirect_url) . "#" . $_GET['anchor'];
     }
     if( isset($_GET['prod'])) {  // preserve prod (product) parameter if it was used
-      $redirect_url = $redirect_url . trailingslashit($redirect_url) . "/?prod=" . $_GET['p'];
+      $redirect_url = $redirect_url . trailingslashit($redirect_url) . "?prod=" . $_GET['prod'];
     }
     if( isset($_GET['ver'])) {  // and preserve ver (version) parameter if used
-      $redirect_url = $redirect_url . trailingslashit($redirect_url) . "&ver=" . $_GET['v'];
+      $redirect_url = $redirect_url . "&ver=" . $_GET['ver'];
     }
 
       wp_redirect($redirect_url);
@@ -195,6 +195,12 @@ if( isset($_GET['token'])) {
     //    if not a valid token, redirect to request email to send magic key to, 
     //    preserving the URL and any anchors. 
     $redirect_url = PZ_MAGIC_KEY_PAGE . "/?q=" . $q . "&anchor=" . $anchor;
+    if( isset($_GET['prod'])) {  // preserve prod (product) parameter if it was used
+      $redirect_url = $redirect_url . "&prod=" . $_GET['prod'];
+    }
+    if( isset($_GET['ver'])) {  // and preserve ver (version) parameter if used
+      $redirect_url = $redirect_url . "&ver=" . $_GET['ver'];
+    }
     wp_redirect($redirect_url);
     exit;
   }
